@@ -26,7 +26,8 @@ jobs:
           pip install -r requirements.txt
           pip install pyinstaller
 
-      - name: Build app
+      - name: Build app (Linux/macOS)
+        if: runner.os != 'Windows'
         run: |
           pyinstaller --noconfirm --windowed --name MusicPlayer \
             --add-data "assets:assets" \
