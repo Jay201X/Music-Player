@@ -28,7 +28,10 @@ jobs:
 
       - name: Build app
         run: |
-          pyinstaller --noconfirm --windowed --name MusicPlayer main.py
+          pyinstaller --noconfirm --windowed --name MusicPlayer \
+            --add-data "assets:assets" \
+            --icon assets/icon.icns \
+            main.py
 
       - name: Upload build
         uses: actions/upload-artifact@v4
