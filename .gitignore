@@ -1,19 +1,15 @@
-# macOS
-.DS_Store
-
-# Python cache
+# Python
 __pycache__/
 *.pyc
 
-# Build outputs
+# PyInstaller
 dist/
 build/
+*.spec
 *.app
-_internal/
 
-# Virtual environment
+# OS
+.DS_Store
+
+# Virtual env
 .venv/
-
-# IDE
-.idea/
-.vscode/
