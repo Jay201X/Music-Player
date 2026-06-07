@@ -28,7 +28,7 @@ jobs:
 
       - name: Build app
         run: |
-          pyinstaller --noconfirm --windowed --name MusicPlayer main.py
+          pyinstaller --noconfirm --windowed --name MusicPlayer AdvancedMusicPlayer.py
 
       - name: Upload build
         uses: actions/upload-artifact@v4
