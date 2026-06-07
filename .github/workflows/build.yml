@@ -28,11 +28,7 @@ jobs:
 
       - name: Build app (Windows)
         if: runner.os == 'Windows'
-        run: |
-          pyinstaller --noconfirm --windowed --name MusicPlayer ^
-          --add-data "assets;assets" ^
-          --icon assets/icon.ico ^
-          main.py
+        run: pyinstaller --noconfirm --windowed --name MusicPlayer --add-data "assets;assets" --icon assets/icon.ico main.py
 
       - name: Upload build
         uses: actions/upload-artifact@v4
