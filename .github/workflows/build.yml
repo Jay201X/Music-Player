@@ -47,10 +47,14 @@ jobs:
       - name: Build (macOS)
         if: matrix.os == 'macos-latest'
         run: |
-          pyinstaller --noconfirm --windowed --name MusicPlayer \
+          pyinstaller --clean --noconfirm --windowed \
+            --name MusicPlayer \
             --add-data "assets:assets" \
+            --collect-all PySide6 \
             --icon assets/icon.icns \
             main.py
+
+          codesign --force --deep --sign - dist/MusicPlayer.app
 
       # ---------------- WINDOWS BUILD ----------------
       - name: Build (Windows)
