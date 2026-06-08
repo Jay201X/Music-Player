@@ -1,12 +1,11 @@
-permissions:
-  contents: write
 name: Build Music Player
 
 on:
   push:
     branches: [ main ]
-    tags:
-      - "v*"
+
+permissions:
+  contents: write   # REQUIRED for releases
 
 jobs:
   build:
@@ -30,6 +29,11 @@ jobs:
           pip install -r requirements.txt
           pip install pyinstaller
 
+      # ---------------- VERSION ----------------
+      - name: Generate version
+        if: matrix.os == 'ubuntu-latest'
+        run: echo "VERSION=v1.0.${{ github.run_number }}" >> $GITHUB_ENV
+
       # ---------------- WINDOWS ----------------
       - name: Build Windows
         if: matrix.os == 'windows-latest'
@@ -42,31 +46,46 @@ jobs:
         if: matrix.os == 'macos-latest'
         run: |
           pyinstaller --noconfirm --windowed --name MusicPlayer --add-data "assets:assets" --icon assets/icon.icns main.py
-          cd dist
-          zip -r ../MusicPlayer-macOS.zip MusicPlayer.app
+
+          mkdir dmg
+          cp -R dist/MusicPlayer.app dmg/
+          hdiutil create MusicPlayer-macOS.dmg -srcfolder dmg -ov
 
       # ---------------- LINUX ----------------
       - name: Build Linux
         if: matrix.os == 'ubuntu-latest'
         run: |
           pyinstaller --noconfirm --windowed --name MusicPlayer --add-data "assets:assets" main.py
-          cd dist
-          zip -r ../MusicPlayer-Linux.zip MusicPlayer
+
+          mkdir -p AppDir
+          cp -r dist/MusicPlayer AppDir/
+
+          wget -q https://github.com/AppImage/AppImageKit/releases/latest/download/appimagetool-x86_64.AppImage
+          chmod +x appimagetool-x86_64.AppImage
+          ./appimagetool-x86_64.AppImage AppDir MusicPlayer-Linux.AppImage
+
+      # ---------------- CHANGELOG ----------------
+      - name: Generate Changelog
+        if: matrix.os == 'ubuntu-latest'
+        run: |
+          echo "CHANGELOG<<EOF" >> $GITHUB_ENV
+          git log -1 --pretty=format:"%s" >> $GITHUB_ENV
+          echo "" >> $GITHUB_ENV
+          echo "EOF" >> $GITHUB_ENV
 
       # ---------------- UPLOAD ARTIFACTS ----------------
-      - name: Upload build artifacts
+      - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
           name: MusicPlayer-${{ matrix.os }}
           path: |
             MusicPlayer-Windows.zip
-            MusicPlayer-macOS.zip
-            MusicPlayer-Linux.zip
+            MusicPlayer-macOS.dmg
+            MusicPlayer-Linux.AppImage
 
   release:
     needs: build
     runs-on: ubuntu-latest
-    if: startsWith(github.ref, 'refs/tags/')
 
     steps:
       - name: Download artifacts
@@ -75,6 +94,13 @@ jobs:
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          files: "**/*.zip"
+          tag_name: v1.0.${{ github.run_number }}
+          name: MusicPlayer v1.0.${{ github.run_number }}
+          body: |
+            ${{ github.event.head_commit.message }}
+          files: |
+            **/*.zip
+            **/*.dmg
+            **/*.AppImage
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
