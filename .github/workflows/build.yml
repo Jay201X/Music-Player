@@ -2,105 +2,123 @@ name: Build & Release Music Player
 
 on:
   push:
-    branches: [ main ]
+    branches:
+      - main
 
 jobs:
   build:
     runs-on: ${{ matrix.os }}
-
     timeout-minutes: 30
 
     strategy:
       matrix:
-        os: [ubuntu-latest, windows-latest, macos-latest]
+        os:
+          - ubuntu-latest
+          - windows-latest
+          - macos-latest
 
     steps:
-      # ---------------- CHECKOUT ----------------
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      # ---------------- PYTHON ----------------
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: "3.11"
 
-      # ---------------- DEPENDENCIES ----------------
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
           pip install pyinstaller
 
-      # ---------------- LINUX BUILD ----------------
+      - name: Show versions
+        run: |
+          python --version
+          pip --version
+          pyinstaller --version
+
+      - name: Verify Python runtime
+        run: |
+          python -c "import struct; import _struct; print('struct OK')"
+          python -c "from PySide6.QtWidgets import QApplication; print('PySide6 OK')"
+
       - name: Build (Linux)
         if: matrix.os == 'ubuntu-latest'
         run: |
           sudo apt-get update
           sudo apt-get install -y xvfb
 
-          xvfb-run pyinstaller --noconfirm --windowed --name MusicPlayer \
+          xvfb-run pyinstaller \
+            --clean \
+            --noconfirm \
+            --windowed \
+            --name MusicPlayer \
+            --collect-all PySide6 \
+            --collect-submodules PySide6 \
             --add-data "assets:assets" \
             main.py
 
-      # ---------------- MAC BUILD ----------------
       - name: Build (macOS)
         if: matrix.os == 'macos-latest'
         run: |
-          pyinstaller --clean --noconfirm --windowed \
+          pyinstaller \
+            --clean \
+            --noconfirm \
+            --windowed \
             --name MusicPlayer \
-            --add-data "assets:assets" \
             --collect-all PySide6 \
+            --collect-submodules PySide6 \
+            --add-data "assets:assets" \
             --icon assets/icon.icns \
             main.py
 
           codesign --force --deep --sign - dist/MusicPlayer.app
+          codesign --verify --deep --strict dist/MusicPlayer.app
 
-      # ---------------- WINDOWS BUILD ----------------
       - name: Build (Windows)
         if: matrix.os == 'windows-latest'
         shell: powershell
         run: |
-          pyinstaller --noconfirm --windowed --name MusicPlayer `
+          pyinstaller `
+            --clean `
+            --noconfirm `
+            --windowed `
+            --name MusicPlayer `
+            --collect-all PySide6 `
+            --collect-submodules PySide6 `
             --add-data "assets;assets" `
             --icon assets/icon.ico `
             main.py
 
-      # ---------------- ZIP OUTPUT ----------------
       - name: Create zip
         run: |
           python -c "import shutil; shutil.make_archive('MusicPlayer-${{ matrix.os }}', 'zip', 'dist')"
 
-      # ---------------- UPLOAD ARTIFACT ----------------
       - name: Upload build artifact
         uses: actions/upload-artifact@v4
         with:
           name: MusicPlayer-${{ matrix.os }}
           path: MusicPlayer-${{ matrix.os }}.zip
 
-  # ================= RELEASE JOB =================
   release:
     needs: build
     runs-on: ubuntu-latest
 
     steps:
-      # ---------------- CHECKOUT ----------------
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      # ---------------- DOWNLOAD ARTIFACTS ----------------
       - name: Download all builds
         uses: actions/download-artifact@v4
         with:
           path: release-assets
 
-      # ---------------- CREATE TAG ----------------
       - name: Create tag
         id: tag
         run: |
           echo "TAG=v1.0.${{ github.run_number }}" >> $GITHUB_OUTPUT
 
-      # ---------------- CREATE GITHUB RELEASE ----------------
       - name: Create Release
         uses: softprops/action-gh-release@v2
         with:
