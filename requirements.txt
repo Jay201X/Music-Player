@@ -2,3 +2,4 @@ pillow
 pynput
 pyinstaller
 pyinstaller-hooks-contrib
+PySide6
