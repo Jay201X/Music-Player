@@ -3,6 +3,8 @@ name: Build Music Player
 on:
   push:
     branches: [ main ]
+    tags:
+      - "v*"
 
 jobs:
   build:
@@ -26,12 +28,51 @@ jobs:
           pip install -r requirements.txt
           pip install pyinstaller
 
-      - name: Build app (Windows)
-        if: runner.os == 'Windows'
-        run: pyinstaller --noconfirm --windowed --name MusicPlayer --add-data "assets;assets" --icon assets/icon.ico main.py
+      # ---------------- WINDOWS ----------------
+      - name: Build Windows
+        if: matrix.os == 'windows-latest'
+        run: |
+          pyinstaller --noconfirm --windowed --name MusicPlayer --add-data "assets;assets" --icon assets/icon.ico main.py
+          powershell Compress-Archive -Path dist\MusicPlayer -DestinationPath MusicPlayer-Windows.zip
 
-      - name: Upload build
+      # ---------------- MACOS ----------------
+      - name: Build macOS
+        if: matrix.os == 'macos-latest'
+        run: |
+          pyinstaller --noconfirm --windowed --name MusicPlayer --add-data "assets:assets" --icon assets/icon.icns main.py
+          cd dist
+          zip -r ../MusicPlayer-macOS.zip MusicPlayer.app
+
+      # ---------------- LINUX ----------------
+      - name: Build Linux
+        if: matrix.os == 'ubuntu-latest'
+        run: |
+          pyinstaller --noconfirm --windowed --name MusicPlayer --add-data "assets:assets" main.py
+          cd dist
+          zip -r ../MusicPlayer-Linux.zip MusicPlayer
+
+      # ---------------- UPLOAD ARTIFACTS ----------------
+      - name: Upload build artifacts
         uses: actions/upload-artifact@v4
         with:
           name: MusicPlayer-${{ matrix.os }}
-          path: dist/
+          path: |
+            MusicPlayer-Windows.zip
+            MusicPlayer-macOS.zip
+            MusicPlayer-Linux.zip
+
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/')
+
+    steps:
+      - name: Download artifacts
+        uses: actions/download-artifact@v4
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: "**/*.zip"
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
