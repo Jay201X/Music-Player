@@ -54,8 +54,6 @@ jobs:
             --noconfirm \
             --windowed \
             --name MusicPlayer \
-            --collect-all PySide6 \
-            --collect-submodules PySide6 \
             --add-data "assets:assets" \
             main.py
 
@@ -67,14 +65,9 @@ jobs:
             --noconfirm \
             --windowed \
             --name MusicPlayer \
-            --collect-all PySide6 \
-            --collect-submodules PySide6 \
             --add-data "assets:assets" \
             --icon assets/icon.icns \
             main.py
-
-          codesign --force --deep --sign - dist/MusicPlayer.app
-          codesign --verify --deep --strict dist/MusicPlayer.app
 
       - name: Build (Windows)
         if: matrix.os == 'windows-latest'
@@ -85,8 +78,6 @@ jobs:
             --noconfirm `
             --windowed `
             --name MusicPlayer `
-            --collect-all PySide6 `
-            --collect-submodules PySide6 `
             --add-data "assets;assets" `
             --icon assets/icon.ico `
             main.py
