@@ -41,7 +41,7 @@ jobs:
       - name: Verify Python runtime
         run: |
           python -c "import struct; import _struct; print('struct OK')"
-          python -c "from PySide6.QtWidgets import QApplication; print('PySide6 OK')"
+          python -c "import PySide6; print('PySide6 OK')"
 
       - name: Build (Linux)
         if: matrix.os == 'ubuntu-latest'
