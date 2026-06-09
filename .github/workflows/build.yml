@@ -1,149 +1,138 @@
 name: Build & Release Music Player
 
 on:
-push:
-branches:
-- main
+  push:
+    branches:
+      - main
 
 jobs:
-build:
-runs-on: ${{ matrix.os }}
-timeout-minutes: 30
+  build:
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
 
-```
-strategy:
-  matrix:
-    os:
-      - ubuntu-latest
-      - windows-latest
-      - macos-latest
+    strategy:
+      matrix:
+        os:
+          - ubuntu-latest
+          - windows-latest
+          - macos-latest
 
-steps:
-  - name: Checkout repository
-    uses: actions/checkout@v4
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
 
-  - name: Set up Python
-    uses: actions/setup-python@v5
-    with:
-      python-version: "3.11"
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
 
-  - name: Install dependencies
-    run: |
-      python -m pip install --upgrade pip
-      pip install -r requirements.txt
-      pip install pyinstaller
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install pyinstaller
 
-  - name: Show versions
-    run: |
-      python --version
-      pip --version
-      pyinstaller --version
+      - name: Show versions
+        run: |
+          python --version
+          pip --version
+          pyinstaller --version
 
-  - name: Verify Python runtime
-    run: |
-      python -c "import struct; import _struct; print('struct OK')"
-      python -c "import PySide6; print('PySide6 OK')"
+      - name: Verify Python runtime
+        run: |
+          python -c "import struct; import _struct; print('struct OK')"
+          python -c "import PySide6; print('PySide6 OK')"
 
-  - name: Build (Linux)
-    if: matrix.os == 'ubuntu-latest'
-    run: |
-      sudo apt-get update
-      sudo apt-get install -y xvfb
+      - name: Build (Linux)
+        if: matrix.os == 'ubuntu-latest'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y xvfb
 
-      xvfb-run pyinstaller \
-        --clean \
-        --noconfirm \
-        --windowed \
-        --name MusicPlayer \
-        --add-data "assets:assets" \
-        main.py
+          xvfb-run pyinstaller \
+            --clean \
+            --noconfirm \
+            --windowed \
+            --name MusicPlayer \
+            --add-data "assets:assets" \
+            main.py
 
-  - name: Build (macOS)
-    if: matrix.os == 'macos-latest'
-    run: |
-      pyinstaller \
-        --clean \
-        --noconfirm \
-        --windowed \
-        --name MusicPlayer \
-        --add-data "assets:assets" \
-        --icon assets/icon.icns \
-        --collect-submodules encodings \
-        --hidden-import=_struct \
-        --hidden-import=struct \
-        --collect-submodules encodings \
-        main.py
-  - name: Verify macOS bundle contents
-    if: matrix.os == 'macos-latest'
-    run: |
-      echo "=== STRUCT FILES ==="
-      find dist -name "*struct*" || true
-  
-      echo "=== ASSETS ==="
-      find dist -name "default_cover.png" || true
-      find dist -name "icon.png" || true
-    
-  - name: Verify macOS bundle contents
-    if: matrix.os == 'macos-latest'
-    run: |
-      echo "=== Checking for _struct ==="
-      find dist -name "*struct*" || true
+      - name: Build (macOS)
+        if: matrix.os == 'macos-latest'
+        run: |
+          pyinstaller \
+            --clean \
+            --noconfirm \
+            --windowed \
+            --name MusicPlayer \
+            --add-data "assets:assets" \
+            --icon assets/icon.icns \
+            --hidden-import=_struct \
+            --hidden-import=struct \
+            --collect-submodules encodings \
+            main.py
 
-      echo "=== Checking assets ==="
-      find dist -name "default_cover.png" || true
-      find dist -name "icon.png" || true
+      - name: Verify macOS bundle contents
+        if: matrix.os == 'macos-latest'
+        run: |
+          echo "=== STRUCT FILES ==="
+          find dist -iname "*struct*" || true
 
-  - name: Build (Windows)
-    if: matrix.os == 'windows-latest'
-    shell: powershell
-    run: |
-      pyinstaller `
-        --clean `
-        --noconfirm `
-        --windowed `
-        --name MusicPlayer `
-        --add-data "assets;assets" `
-        --icon assets/icon.ico `
-        main.py
+          echo "=== ASSETS ==="
+          find dist -name "default_cover.png" || true
+          find dist -name "icon.png" || true
 
-  - name: Create zip
-    run: |
-      python -c "import shutil; shutil.make_archive('MusicPlayer-${{ matrix.os }}', 'zip', 'dist')"
+          echo "=== APP CONTENTS ==="
+          find dist/MusicPlayer.app/Contents -maxdepth 4 | head -200 || true
 
-  - name: Upload build artifact
-    uses: actions/upload-artifact@v4
-    with:
-      name: MusicPlayer-${{ matrix.os }}
-      path: MusicPlayer-${{ matrix.os }}.zip
-```
+      - name: Build (Windows)
+        if: matrix.os == 'windows-latest'
+        shell: powershell
+        run: |
+          pyinstaller `
+            --clean `
+            --noconfirm `
+            --windowed `
+            --name MusicPlayer `
+            --add-data "assets;assets" `
+            --icon assets/icon.ico `
+            main.py
 
-release:
-needs: build
-runs-on: ubuntu-latest
+      - name: Create zip
+        run: |
+          python -c "import shutil; shutil.make_archive('MusicPlayer-${{ matrix.os }}', 'zip', 'dist')"
 
-```
-steps:
-  - name: Checkout repository
-    uses: actions/checkout@v4
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: MusicPlayer-${{ matrix.os }}
+          path: MusicPlayer-${{ matrix.os }}.zip
 
-  - name: Download all builds
-    uses: actions/download-artifact@v4
-    with:
-      path: release-assets
+  release:
+    needs: build
+    runs-on: ubuntu-latest
 
-  - name: Create tag
-    id: tag
-    run: |
-      echo "TAG=v1.0.${{ github.run_number }}" >> $GITHUB_OUTPUT
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
 
-  - name: Create Release
-    uses: softprops/action-gh-release@v2
-    with:
-      tag_name: ${{ steps.tag.outputs.TAG }}
-      name: Music Player ${{ steps.tag.outputs.TAG }}
-      draft: false
-      prerelease: false
-      files: release-assets/**/*.zip
-    env:
-      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-```
+      - name: Download all builds
+        uses: actions/download-artifact@v4
+        with:
+          path: release-assets
+
+      - name: Create tag
+        id: tag
+        run: |
+          echo "TAG=v1.0.${{ github.run_number }}" >> $GITHUB_OUTPUT
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.tag.outputs.TAG }}
+          name: Music Player ${{ steps.tag.outputs.TAG }}
+          draft: false
+          prerelease: false
+          files: release-assets/**/*.zip
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
