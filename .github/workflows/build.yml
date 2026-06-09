@@ -110,6 +110,13 @@ jobs:
           name: MusicPlayer-${{ matrix.os }}
           path: MusicPlayer-${{ matrix.os }}.zip
 
+
+      - name: Debug GitHub context
+        run: |
+          echo "github.ref=${{ github.ref }}"
+          echo "github.ref_name=${{ github.ref_name }}"
+          echo "github.event_name=${{ github.event_name }}"
+  
   release:
     if: startsWith(github.ref, 'refs/tags/')
     needs: build
