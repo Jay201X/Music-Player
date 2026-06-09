@@ -110,24 +110,19 @@ jobs:
           name: MusicPlayer-${{ matrix.os }}
           path: MusicPlayer-${{ matrix.os }}.zip
 
-
-      - name: Debug GitHub context
-        run: |
-          echo "github.ref=${{ github.ref }}"
-          echo "github.ref_name=${{ github.ref_name }}"
-          echo "github.event_name=${{ github.event_name }}"
-  
   release:
     if: startsWith(github.ref, 'refs/tags/')
     needs: build
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/download-artifact@v4
+      - name: Download all builds
+        uses: actions/download-artifact@v4
         with:
           path: release-assets
 
-      - uses: softprops/action-gh-release@v2
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
         with:
           files: release-assets/**/*.zip
         env:
