@@ -21,16 +21,24 @@ def suppress_stderr():
         finally:
             sys.stderr = old_stderr
 
-def resource_path(relative_path: str) -> str:
-    base_path = getattr(sys, "_MEIPASS", os.path.abspath("."))
-    full_path = os.path.join(base_path, relative_path)
+from pathlib import Path
+import sys
+
+def resource_path(relative_path):
+    if getattr(sys, "frozen", False):
+        app_root = Path(sys.executable).resolve().parent.parent
+        base_path = app_root / "Resources"
+    else:
+        base_path = Path(__file__).resolve().parent
+
+    full_path = base_path / relative_path
 
     print("RESOURCE DEBUG:")
     print("BASE:", base_path)
     print("LOOKING FOR:", full_path)
-    print("EXISTS:", os.path.exists(full_path))
+    print("EXISTS:", full_path.exists())
 
-    return full_path
+    return str(full_path)
 import random
 from typing import TYPE_CHECKING, Optional
 
